@@ -273,56 +273,58 @@ export function SettingsView({
               </div>
             </div>
             <div className="rounded-[28px] border border-border/60 bg-background/70 p-5">
-              <form className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_160px_180px_180px_auto]" onSubmit={reminderForm.handleSubmit(submitReminderPreferences)}>
+              <form className="space-y-5" onSubmit={reminderForm.handleSubmit(submitReminderPreferences)}>
                 <div>
                   <p className="font-semibold">Recurring reminders</p>
                   <p className="mt-1 text-sm text-muted-foreground">Lead time and channels.</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Lead time</Label>
-                  <Input type="number" min="0" max="30" {...reminderForm.register("reminderDaysBefore", { valueAsNumber: true })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>In-app alerts</Label>
-                  <Select
-                    value={reminderForm.watch("reminderInAppEnabled") ? "enabled" : "disabled"}
-                    onValueChange={(value) => {
-                      const enabled = value === "enabled"
-                      reminderForm.setValue("reminderInAppEnabled", enabled)
-                      if (!enabled) {
-                        reminderForm.setValue("reminderEmailEnabled", false)
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="enabled">Enabled</SelectItem>
-                      <SelectItem value="disabled">Disabled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Email alerts</Label>
-                  <Select
-                    value={reminderForm.watch("reminderEmailEnabled") ? "enabled" : "disabled"}
-                    onValueChange={(value) => reminderForm.setValue("reminderEmailEnabled", value === "enabled")}
-                    disabled={!reminderForm.watch("reminderInAppEnabled")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="disabled">Disabled</SelectItem>
-                      <SelectItem value="enabled">Enabled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button type="submit" className="w-full xl:w-auto" disabled={isPending}>
-                    Save reminders
-                  </Button>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end">
+                  <div className="space-y-2">
+                    <Label>Lead time</Label>
+                    <Input type="number" min="0" max="30" {...reminderForm.register("reminderDaysBefore", { valueAsNumber: true })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>In-app alerts</Label>
+                    <Select
+                      value={reminderForm.watch("reminderInAppEnabled") ? "enabled" : "disabled"}
+                      onValueChange={(value) => {
+                        const enabled = value === "enabled"
+                        reminderForm.setValue("reminderInAppEnabled", enabled)
+                        if (!enabled) {
+                          reminderForm.setValue("reminderEmailEnabled", false)
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="enabled">Enabled</SelectItem>
+                        <SelectItem value="disabled">Disabled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email alerts</Label>
+                    <Select
+                      value={reminderForm.watch("reminderEmailEnabled") ? "enabled" : "disabled"}
+                      onValueChange={(value) => reminderForm.setValue("reminderEmailEnabled", value === "enabled")}
+                      disabled={!reminderForm.watch("reminderInAppEnabled")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="disabled">Disabled</SelectItem>
+                        <SelectItem value="enabled">Enabled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button type="submit" className="w-full xl:w-auto" disabled={isPending}>
+                      Save reminders
+                    </Button>
+                  </div>
                 </div>
               </form>
             </div>
