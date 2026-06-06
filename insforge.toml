@@ -1,0 +1,7 @@
+[auth]
+allowed_redirect_urls = [
+  "http://localhost:3000/login",
+  "http://localhost:3000/reset-password",
+  "https://spendly.insforge.site/login",
+  "https://spendly.insforge.site/reset-password",
+]

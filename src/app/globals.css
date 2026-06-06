@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 172 86% 40%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 171 41% 93%;
+    --accent-foreground: 173 80% 23%;
+    --destructive: 355 78% 57%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 89%;
+    --input: 214 32% 89%;
+    --ring: 172 86% 40%;
+    --chart-1: 172 86% 40%;
+    --chart-2: 214 90% 57%;
+    --chart-3: 31 98% 58%;
+    --chart-4: 333 71% 58%;
+    --chart-5: 267 84% 66%;
+    --radius: 1.25rem;
+  }
+
+  .dark {
+    --background: 221 39% 10%;
+    --foreground: 210 40% 98%;
+    --card: 223 35% 14%;
+    --card-foreground: 210 40% 98%;
+    --popover: 223 35% 14%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 171 78% 49%;
+    --primary-foreground: 221 39% 10%;
+    --secondary: 221 30% 19%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 223 29% 16%;
+    --muted-foreground: 215 20% 72%;
+    --accent: 223 28% 20%;
+    --accent-foreground: 171 78% 49%;
+    --destructive: 355 84% 63%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 32% 24%;
+    --input: 217 32% 24%;
+    --ring: 171 78% 49%;
+    --chart-1: 171 78% 49%;
+    --chart-2: 196 94% 58%;
+    --chart-3: 38 92% 56%;
+    --chart-4: 333 82% 63%;
+    --chart-5: 265 88% 68%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at top left, rgba(20, 184, 166, 0.18), transparent 30%),
+      radial-gradient(circle at top right, rgba(14, 165, 233, 0.15), transparent 24%),
+      linear-gradient(180deg, rgba(15, 23, 42, 0.02), transparent 30%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  .surface-grid {
+    background-image: var(--surface-grid);
+    background-size: 32px 32px;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
