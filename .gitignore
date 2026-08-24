@@ -27,7 +27,29 @@
 # misc
 .DS_Store
 *.pem
+*.tsbuildinfo
 .playwright-mcp/
+
+# Xcode
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/DerivedData/
+ios/build/
+ios/Config/Local.xcconfig
+ios/AppStoreScreenshots/raw/
+ios/Spendly/Assets.xcassets/AppIcon.appiconset/SpendlyIcon 2.png
+ios/Spendly/Assets.xcassets/Brand.imageset/SpendlyBrand 2.png
+
+# Android
+android/.gradle/
+android/local.properties
+android/**/build/
+android/*.jks
+android/*.keystore
+android/app/google-services.json
+
+# Local verification captures
+spendly-simulator-live.png
 
 # debug
 npm-debug.log*

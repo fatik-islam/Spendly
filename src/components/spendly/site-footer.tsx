@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { cn } from "@/lib/utils"
 
 const COPYRIGHT_YEAR = new Date().getFullYear()
@@ -18,7 +20,12 @@ export function SiteFooter({
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="leading-6">© {COPYRIGHT_YEAR} Spendly.</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 leading-6">
+          <p>© {COPYRIGHT_YEAR} Spendly.</p>
+          <Link href="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>
+          <Link href="/support" className="transition-colors hover:text-foreground">Support</Link>
+          <Link href="/account-deletion" className="transition-colors hover:text-foreground">Delete account</Link>
+        </div>
         <p className="flex flex-wrap items-center gap-2 text-xs font-semibold tracking-[0.14em] text-muted-foreground">
           <span>Built by</span>
           <a

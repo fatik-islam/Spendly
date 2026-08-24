@@ -1,0 +1,6 @@
+ios/
+android/
+functions/
+migrations/
+*.md
+*.tsbuildinfo

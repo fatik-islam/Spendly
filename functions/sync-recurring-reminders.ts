@@ -1,4 +1,5 @@
 import { createAdminClient } from "npm:@insforge/sdk"
+import { importPKCS8, SignJWT } from "npm:jose@6"
 
 interface EmailJob {
   reminder_id: string
@@ -8,6 +9,40 @@ interface EmailJob {
   title: string
   body: string
   due_date: string
+}
+
+interface PushJob {
+  reminder_id: string
+  device_token_id: string
+  device_token: string
+  environment: "sandbox" | "production"
+  bundle_id: string
+  title: string
+  body: string
+  due_date: string
+}
+
+interface APNsResult {
+  ok: boolean
+  status: number
+  reason: string | null
+}
+
+interface FCMJob {
+  reminder_id: string
+  device_token_id: string
+  device_token: string
+  package_name: string
+  title: string
+  body: string
+  due_date: string
+}
+
+interface FCMResult {
+  ok: boolean
+  status: number
+  reason: string | null
+  invalidToken: boolean
 }
 
 const corsHeaders = {
@@ -75,6 +110,163 @@ function createClient() {
     baseUrl,
     apiKey
   })
+}
+
+function normalizedPrivateKey(value: string) {
+  return value.replaceAll("\\n", "\n").trim() + "\n"
+}
+
+async function createAPNsProviderToken() {
+  const keyID = Deno.env.get("APNS_KEY_ID")
+  const teamID = Deno.env.get("APNS_TEAM_ID")
+  const privateKeyValue = Deno.env.get("APNS_PRIVATE_KEY")
+
+  if (!keyID || !teamID || !privateKeyValue) {
+    return null
+  }
+
+  const privateKey = await importPKCS8(normalizedPrivateKey(privateKeyValue), "ES256")
+  const token = await new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: keyID })
+    .setIssuer(teamID)
+    .setIssuedAt()
+    .sign(privateKey)
+
+  return { token, keyID, teamID }
+}
+
+async function sendAPNsNotification(job: PushJob, providerToken: string): Promise<APNsResult> {
+  const host = job.environment === "sandbox"
+    ? "https://api.sandbox.push.apple.com"
+    : "https://api.push.apple.com"
+  const response = await fetch(`${host}/3/device/${job.device_token}`, {
+    method: "POST",
+    headers: {
+      "authorization": `bearer ${providerToken}`,
+      "apns-topic": job.bundle_id,
+      "apns-push-type": "alert",
+      "apns-priority": "10",
+      "apns-expiration": "0",
+      "apns-collapse-id": `spendly-${job.reminder_id}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      aps: {
+        alert: {
+          title: job.title,
+          body: job.body
+        },
+        sound: "default",
+        badge: 1,
+        "thread-id": "spendly-recurring"
+      },
+      reminder_id: job.reminder_id,
+      destination: "recurring",
+      due_date: job.due_date
+    })
+  })
+
+  if (response.ok) {
+    return { ok: true, status: response.status, reason: null }
+  }
+
+  const payload = await response.json().catch(() => ({})) as { reason?: string }
+  return {
+    ok: false,
+    status: response.status,
+    reason: payload.reason ?? `APNs returned HTTP ${response.status}`
+  }
+}
+
+async function createFCMAccessToken() {
+  const projectID = Deno.env.get("FCM_PROJECT_ID")
+  const clientEmail = Deno.env.get("FCM_CLIENT_EMAIL")
+  const encodedPrivateKey = Deno.env.get("FCM_PRIVATE_KEY_BASE64")
+  const privateKeyValue = Deno.env.get("FCM_PRIVATE_KEY") ?? (
+    encodedPrivateKey
+      ? new TextDecoder().decode(Uint8Array.from(atob(encodedPrivateKey), (character) => character.charCodeAt(0)))
+      : null
+  )
+  if (!projectID || !clientEmail || !privateKeyValue) {
+    return null
+  }
+
+  const privateKey = await importPKCS8(normalizedPrivateKey(privateKeyValue), "RS256")
+  const assertion = await new SignJWT({
+    scope: "https://www.googleapis.com/auth/firebase.messaging"
+  })
+    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setIssuer(clientEmail)
+    .setSubject(clientEmail)
+    .setAudience("https://oauth2.googleapis.com/token")
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(privateKey)
+
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion
+    })
+  })
+  const payload = await response.json().catch(() => ({})) as {
+    access_token?: string
+    error_description?: string
+  }
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description ?? `Google OAuth returned HTTP ${response.status}`)
+  }
+  return { accessToken: payload.access_token, projectID }
+}
+
+async function sendFCMNotification(job: FCMJob, credentials: { accessToken: string; projectID: string }): Promise<FCMResult> {
+  const response = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${credentials.projectID}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${credentials.accessToken}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        message: {
+          token: job.device_token,
+          notification: { title: job.title, body: job.body },
+          data: {
+            reminder_id: job.reminder_id,
+            destination: "recurring",
+            due_date: job.due_date,
+            title: job.title,
+            body: job.body
+          },
+          android: {
+            priority: "high",
+            notification: {
+              channel_id: "spendly_reminders",
+              sound: "default",
+              tag: `spendly-${job.reminder_id}`
+            }
+          }
+        }
+      })
+    }
+  )
+  if (response.ok) {
+    return { ok: true, status: response.status, reason: null, invalidToken: false }
+  }
+  const payload = await response.json().catch(() => ({})) as {
+    error?: { message?: string; status?: string; details?: Array<{ errorCode?: string }> }
+  }
+  const errorCode = payload.error?.details?.find((detail) => detail.errorCode)?.errorCode
+  const reason = errorCode ?? payload.error?.status ?? payload.error?.message ?? `FCM returned HTTP ${response.status}`
+  return {
+    ok: false,
+    status: response.status,
+    reason,
+    invalidToken: errorCode === "UNREGISTERED" || errorCode === "INVALID_ARGUMENT"
+  }
 }
 
 function getProvidedToken(req: Request) {
@@ -177,12 +369,156 @@ export default async function syncRecurringReminders(req: Request): Promise<Resp
       }
     }
 
+    const apnsCredentials = await createAPNsProviderToken()
+    const configuredEnvironment = (Deno.env.get("APNS_ENVIRONMENT") ?? "production") as "sandbox" | "production"
+    let queuedPushJobs = 0
+    let pushedCount = 0
+
+    if (apnsCredentials) {
+      const { data: pushJobs, error: pushJobsError } = await client.database.rpc(
+        "list_pending_recurring_reminder_pushes",
+        { p_limit: Math.min(limit * 4, 200) }
+      )
+      if (pushJobsError) {
+        throw pushJobsError
+      }
+
+      const eligiblePushJobs = ((pushJobs ?? []) as PushJob[])
+        .filter((job) => job.environment === configuredEnvironment)
+      queuedPushJobs = eligiblePushJobs.length
+
+      for (const job of eligiblePushJobs) {
+        let result: APNsResult
+        try {
+          result = await sendAPNsNotification(job, apnsCredentials.token)
+        } catch (error) {
+          result = {
+            ok: false,
+            status: 0,
+            reason: error instanceof Error ? error.message : "APNs request failed"
+          }
+        }
+
+        const { error: recordError } = await client.database.rpc(
+          "record_recurring_reminder_push_result",
+          {
+            p_reminder_id: job.reminder_id,
+            p_device_token_id: job.device_token_id,
+            p_sent: result.ok,
+            p_error: result.reason
+          }
+        )
+
+        if (recordError) {
+          failures.push({
+            reminderId: job.reminder_id,
+            email: "push",
+            message: recordError.message
+          })
+          continue
+        }
+
+        if (result.ok) {
+          pushedCount += 1
+          continue
+        }
+
+        if (["BadDeviceToken", "DeviceTokenNotForTopic", "Unregistered"].includes(result.reason ?? "")) {
+          const { error: disableError } = await client.database
+            .from("apns_device_tokens")
+            .update({ enabled: false })
+            .eq("id", job.device_token_id)
+
+          if (disableError) {
+            failures.push({
+              reminderId: job.reminder_id,
+              email: "push",
+              message: disableError.message
+            })
+          }
+        }
+
+        failures.push({
+          reminderId: job.reminder_id,
+          email: "push",
+          message: result.reason ?? `APNs returned HTTP ${result.status}`
+        })
+      }
+    }
+
+    const fcmCredentials = await createFCMAccessToken()
+    let queuedFCMJobs = 0
+    let fcmPushedCount = 0
+
+    if (fcmCredentials) {
+      const { data: fcmJobs, error: fcmJobsError } = await client.database.rpc(
+        "list_pending_recurring_reminder_fcm_pushes",
+        { p_limit: Math.min(limit * 4, 200) }
+      )
+      if (fcmJobsError) {
+        throw fcmJobsError
+      }
+      queuedFCMJobs = Array.isArray(fcmJobs) ? fcmJobs.length : 0
+
+      for (const job of (fcmJobs ?? []) as FCMJob[]) {
+        let result: FCMResult
+        try {
+          result = await sendFCMNotification(job, fcmCredentials)
+        } catch (error) {
+          result = {
+            ok: false,
+            status: 0,
+            reason: error instanceof Error ? error.message : "FCM request failed",
+            invalidToken: false
+          }
+        }
+
+        const { error: recordError } = await client.database.rpc(
+          "record_recurring_reminder_fcm_result",
+          {
+            p_reminder_id: job.reminder_id,
+            p_device_token_id: job.device_token_id,
+            p_sent: result.ok,
+            p_error: result.reason
+          }
+        )
+        if (recordError) {
+          failures.push({ reminderId: job.reminder_id, email: "fcm", message: recordError.message })
+          continue
+        }
+        if (result.ok) {
+          fcmPushedCount += 1
+          continue
+        }
+        if (result.invalidToken) {
+          const { error: disableError } = await client.database
+            .from("fcm_device_tokens")
+            .update({ enabled: false })
+            .eq("id", job.device_token_id)
+          if (disableError) {
+            failures.push({ reminderId: job.reminder_id, email: "fcm", message: disableError.message })
+          }
+        }
+        failures.push({
+          reminderId: job.reminder_id,
+          email: "fcm",
+          message: result.reason ?? `FCM returned HTTP ${result.status}`
+        })
+      }
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,
         generatedCount: typeof insertedCount === "number" ? insertedCount : 0,
         queuedEmailJobs: Array.isArray(emailJobs) ? emailJobs.length : 0,
         emailedCount,
+        apnsConfigured: Boolean(apnsCredentials),
+        queuedPushJobs,
+        pushedCount,
+        fcmConfigured: Boolean(fcmCredentials),
+        queuedFCMJobs,
+        fcmPushedCount,
         failures
       }),
       {

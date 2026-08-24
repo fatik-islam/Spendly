@@ -1,0 +1,9 @@
+sdk.dir=/Users/your-name/Library/Android/sdk
+SPENDLY_INSFORGE_ANON_KEY=your-local-anon-key
+
+# Add these four public Firebase Android app values after registering
+# com.spendly.finance.app in Firebase.
+SPENDLY_FIREBASE_PROJECT_ID=
+SPENDLY_FIREBASE_APP_ID=
+SPENDLY_FIREBASE_API_KEY=
+SPENDLY_FIREBASE_SENDER_ID=

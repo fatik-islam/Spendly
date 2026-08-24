@@ -100,8 +100,11 @@ npx @insforge/cli link
 ```bash
 npx @insforge/cli deployments env set NEXT_PUBLIC_INSFORGE_URL https://your-project.us-east.insforge.app
 npx @insforge/cli deployments env set NEXT_PUBLIC_INSFORGE_ANON_KEY your-insforge-anon-key
-npx @insforge/cli deployments env set NEXT_PUBLIC_APP_URL https://spendly.insforge.site
+npx @insforge/cli deployments env set NEXT_PUBLIC_APP_URL https://spendly.syedfatikislam.com
+npx @insforge/cli deployments env set INSFORGE_API_KEY your-insforge-api-key
 ```
+
+`INSFORGE_API_KEY` is server-only and powers the authenticated account-deletion route. Never expose it through a `NEXT_PUBLIC_` variable.
 
 2. Make sure `insforge.toml` includes your deployed login URL in `auth.allowed_redirect_urls`.
 
@@ -143,7 +146,7 @@ npx @insforge/cli deployments deploy .
 
 Current production URL:
 
-- [https://spendly.insforge.site](https://spendly.insforge.site)
+- [https://spendly.syedfatikislam.com](https://spendly.syedfatikislam.com)
 
 ## Data model
 

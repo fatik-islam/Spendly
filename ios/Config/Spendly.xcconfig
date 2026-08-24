@@ -1,0 +1,3 @@
+// Shared target configuration. The optional local file is ignored by Git.
+INSFORGE_ANON_KEY =
+#include? "Local.xcconfig"
